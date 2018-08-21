@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import styled from 'styled-components';
-import InfiniteScroll from 'react-infinite-scroller'
+import InfiniteScroll from 'react-infinite-scroller';
 
 import ItemList from './containers/ItemList.js';
 
@@ -9,7 +9,7 @@ const Container = styled.div`
   padding: 0;
   padding-top: 80px;
   @media screen and (max-width: 550px) {
-    padding-top: 200px;d
+    padding-top: 200px;
   }
 `;
 
@@ -49,18 +49,19 @@ const Topbar = styled.div`
       ${InputGroup} {
         margin: 4px 0;
       }
-      input[type='text'], input[type='password'] {
+      input[type='text'],
+      input[type='password'] {
         margin: 0 0 4px;
       }
     }
   }
-  input[type='text'], input[type='password'] {
+  input[type='text'],
+  input[type='password'] {
     height: 38px;
     width: 240px;
     margin: 0 16px 0 0;
     font-size: 1.1em;
     padding: 0.2em;
-
   }
 
   @media screen and (max-width: 550px) {
@@ -76,7 +77,6 @@ const SubmitButton = styled.button`
   text-transform: uppercase;
   border: 1px solid #b2bec3;
   padding: 0.2em 1em;
-
 `;
 
 const InputGroup = styled.div`
@@ -98,7 +98,6 @@ class SearchPage extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      currentPageShown: 0, // page of 10 results sent to View
       lastPageReceived: 0, // index # of last page retrieved
       results: [], // should be, list of lists, indexed by page #
       ready: [false], // indexed by page ready
@@ -116,19 +115,20 @@ class SearchPage extends Component {
     // reset state for new Results
     this.timeZero = performance.now();
     this.setState({
-      currentPageShown: 0,
       lastPageReceived: 0,
       results: [[]],
       ready: [false],
       nextPageUrl: null,
     });
     try {
-      fetch(`https://api.zinc.io/v1/realtime/search?query=${searchQuery}&retailer=amazon`, {
+      fetch(
+        `https://api.zinc.io/v1/realtime/search?query=${searchQuery}&retailer=amazon`,
+        {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + btoa(`${token}:`),
-          }
+            Authorization: 'Basic ' + btoa(`${token}:`),
+          },
         }
       )
         .then(res => {
@@ -138,7 +138,7 @@ class SearchPage extends Component {
         })
         .then(res => {
           let results = this.state.results;
-          results[this.state.currentPageShown] = res.results;
+          results[0] = res.results;
           this.timeOne = performance.now();
           this.setState({
             results: results,
@@ -146,7 +146,10 @@ class SearchPage extends Component {
             ready: [true],
             timeElapsed: this.timeOne - this.timeZero,
           });
-          console.log(`Received first page of results. Query took: ${this.timeOne - this.timeZero}ms.`)
+          console.log(
+            `Received first page of results. Query took: ${this.timeOne -
+              this.timeZero}ms.`
+          );
         });
     } catch (e) {
       console.error('Error getResults:' + e);
@@ -163,38 +166,48 @@ class SearchPage extends Component {
     let currentResults = this.state.results;
     currentResults[nextPageIndex] = [];
     let currentReady = this.state.ready;
-    currentReady[nextPageIndex] = false
-    let nextPageUrl = this.state.nextPageUrl.replace(/io\/realtime/, 'io/v1/realtime')
+    currentReady[nextPageIndex] = false;
+    let nextPageUrl = this.state.nextPageUrl.replace(
+      /io\/realtime/,
+      'io/v1/realtime'
+    );
 
-    this.setState({ results: currentResults, ready: currentReady, nextPageUrl: null });
+    this.setState({
+      results: currentResults,
+      ready: currentReady,
+      nextPageUrl: null,
+    });
 
-    console.log(`Getting page ${nextPageIndex}...`)
+    console.log(`Getting page ${nextPageIndex}...`);
     const timeZero = performance.now();
     try {
       fetch(nextPageUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Basic ' + btoa(`${token}:`),
-          }
-        }
-      ).then(res => {
-        if (res.status === 200) {
-          return res.json();
-        }
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Basic ' + btoa(`${token}:`),
+        },
       })
-      .then(res => {
-        currentResults[nextPageIndex] = res.results;
-        currentReady[nextPageIndex] = true
-        const timeOne = performance.now()
-        this.setState({
-          results: currentResults,
-          lastPageReceived: nextPageIndex,
-          nextPageUrl: res.nextPage,
-          ready: currentReady,
-        });
-        console.log(`Received page ${nextPageIndex}. Time elapsed: ${timeOne - timeZero}ms.`)
-      }) // we should reset nextPageUrls here in case it fails so we can retry later
+        .then(res => {
+          if (res.status === 200) {
+            return res.json();
+          }
+        })
+        .then(res => {
+          currentResults[nextPageIndex] = res.results;
+          currentReady[nextPageIndex] = true;
+          const timeOne = performance.now();
+          this.setState({
+            results: currentResults,
+            lastPageReceived: nextPageIndex,
+            nextPageUrl: res.nextPage,
+            ready: currentReady,
+          });
+          console.log(
+            `Received page ${nextPageIndex}. Time elapsed: ${timeOne -
+              timeZero}ms.`
+          );
+        }); // we should reset nextPageUrls here in case it fails so we can retry later
     } catch (e) {
       console.error('Error getNextResultPage:' + e);
     }
@@ -206,7 +219,7 @@ class SearchPage extends Component {
     let searchQuery = this.searchQuery.current.value;
 
     if (!clientToken || !searchQuery) {
-      return
+      return;
     }
 
     this._getNewResults(clientToken, searchQuery);
@@ -214,7 +227,6 @@ class SearchPage extends Component {
 
   render() {
     let results = this.state.results;
-    let currentPageShown = this.state.currentPageShown;
     let resultsRendered = this.state.results.map((oneResultsPage, index) => (
       <ItemList
         ready={this.state.ready[index]}
@@ -245,13 +257,19 @@ class SearchPage extends Component {
         <ResultsContainer>
           <InfiniteScroll
             pageStart={0}
-            loadMore={() => {this._getNextResultPage(this.clientTokenInput.current.value)}}
+            loadMore={() => {
+              this._getNextResultPage(this.clientTokenInput.current.value);
+            }}
             hasMore={this.state.nextPageUrl ? true : false}
-            loader={<div className="loader" key={0}>Loading ...</div>}>
-              {resultsRendered}
-            </InfiniteScroll>
+            loader={
+              <div className="loader" key={0}>
+                Loading ...
+              </div>
+            }
+          >
+            {resultsRendered}
+          </InfiniteScroll>
         </ResultsContainer>
-
       </Container>
     );
   }

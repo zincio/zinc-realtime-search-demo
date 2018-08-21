@@ -7,13 +7,19 @@ const ItemsContainer = styled.div`
   flex-direction: column;
 `;
 
+/*
+ * Each ItemList represents 10 items.
+ * Until props.ready is true, it will display placeholders
+ *
+ */
+
 class ItemList extends Component {
   constructor(props) {
     super(props);
   }
 
   componentWillUnmount() {
-    console.debug('item unmounting');
+    console.debug('itemlist unmounting');
   }
 
   render() {

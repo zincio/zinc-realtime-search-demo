@@ -117,8 +117,6 @@ class Item extends Component {
         ready={this.props.ready}
         customPlaceholder={ItemPlaceholder}
         showLoadinganimation={true}
-
-
       >
         <a
           href={`https://www.amazon.com/-/dp/${item.product_id}`}
