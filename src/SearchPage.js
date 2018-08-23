@@ -114,6 +114,7 @@ class SearchPage extends Component {
 
   _getNewResults(token, searchQuery) {
     // reset state for new Results
+    window.scrollTo(0, 0);
     this.timeZero = performance.now();
     this.setState({
       lastPageReceived: 0,
