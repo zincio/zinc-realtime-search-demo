@@ -77,6 +77,7 @@ const SubmitButton = styled.button`
   text-transform: uppercase;
   border: 1px solid #b2bec3;
   padding: 0.2em 1em;
+  margin: 4px 0;
 `;
 
 const InputGroup = styled.div`
@@ -119,6 +120,8 @@ class SearchPage extends Component {
       results: [[]],
       ready: [false],
       nextPageUrl: null,
+      error: null,
+      clientToken: null,
     });
     try {
       fetch(
@@ -135,6 +138,12 @@ class SearchPage extends Component {
           if (res.status === 200) {
             return res.json();
           }
+          if (res.status === 403) {
+            throw Error('403 Forbidden - Check client token');
+          }
+          if (res.status === 503) {
+            throw Error('503 Service Unavailable - Rate Limit Exceeded');
+          }
         })
         .then(res => {
           let results = this.state.results;
@@ -145,11 +154,23 @@ class SearchPage extends Component {
             nextPageUrl: res.nextPage,
             ready: [true],
             timeElapsed: this.timeOne - this.timeZero,
+            clientToken: token,
           });
           console.log(
             `Received first page of results. Query took: ${this.timeOne -
               this.timeZero}ms.`
           );
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          this.setState({
+            lastPageReceived: 0,
+            results: [],
+            ready: [false],
+            nextPageUrl: null,
+            error: error,
+            clientToken: null,
+          });
         });
     } catch (e) {
       console.error('Error getResults:' + e);
@@ -185,7 +206,7 @@ class SearchPage extends Component {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Basic ' + btoa(`${token}:`),
+          Authorization: 'Basic ' + btoa(`${this.state.clientToken || token}:`),
         },
       })
         .then(res => {
@@ -253,25 +274,55 @@ class SearchPage extends Component {
             <SubmitButton type="submit">Submit</SubmitButton>
           </form>
         </Topbar>
-
-        <ResultsContainer>
-          <InfiniteScroll
-            pageStart={0}
-            loadMore={() => {
-              this._getNextResultPage(this.clientTokenInput.current.value);
-            }}
-            hasMore={this.state.nextPageUrl ? true : false}
-            loader={
-              <div className="loader" key={0}>
-                Loading ...
+        <SearchErrorBoundary>
+          <ResultsContainer>
+            {this.state.error && (
+              <div style={{ color: 'red', margin: '40px auto' }}>
+                {this.state.error.toString()}
               </div>
-            }
-          >
-            {resultsRendered}
-          </InfiniteScroll>
-        </ResultsContainer>
+            )}
+            <InfiniteScroll
+              pageStart={0}
+              loadMore={() => {
+                this._getNextResultPage(this.clientTokenInput.current.value);
+              }}
+              hasMore={this.state.nextPageUrl ? true : false}
+              loader={
+                <div className="loader" key={0}>
+                  Loading ...
+                </div>
+              }
+            >
+              {resultsRendered}
+            </InfiniteScroll>
+          </ResultsContainer>
+        </SearchErrorBoundary>
       </Container>
     );
+  }
+}
+
+class SearchErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  componentDidCatch(error, info) {
+    // Display fallback UI
+    this.setState({ hasError: true });
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // You can render any custom fallback UI
+      return (
+        <h3 style={{ margin: '200px auto' }}>
+          Something went wrong. Please try again.
+        </h3>
+      );
+    }
+    return this.props.children;
   }
 }
 
