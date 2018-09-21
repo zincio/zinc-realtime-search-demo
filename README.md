@@ -4,7 +4,7 @@ This repository contains a demo of Zinc's realtime search capabilities.
 
 ## Getting Access
 
-To run the demo you must get access to Zinc's realtime API. If you do not have access  adn you are interested contact sales@zinc.io.
+To run the demo you must get access to Zinc's realtime API. If you do not have access  adn you are interested contact sales@zinc.io. If you already have access, there is a running version of this demo at http://amazonsearchdemo.surge.sh/ 
 
 ## Build
 
