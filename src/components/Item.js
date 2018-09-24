@@ -17,6 +17,7 @@ const ItemContainer = styled.div`
   margin: 8px 0;
   padding: 16px 16px;
   display: flex;
+  flex-wrap: wrap;
   @media screen and (max-width: 550px) {
     font-size: 10pt;
     padding: 8px;
@@ -83,6 +84,31 @@ const Cents = styled.span`
   margin: 0 0 0 0.1em;
 `;
 
+const ExpandedItemDetails = styled.div`
+  border-top: 1px solid #eee;
+  padding: 16px;
+  margin-top: 16px;
+  flex: 1 1 100%;
+  text-align: left;
+  table {
+    font-size: 0.8em;
+    vertical-align: baseline;
+    border-spacing: 0;
+    width: 100%;
+    ul {
+      margin: 0;
+      padding-left: 2em;
+    }
+    td {
+      &:first-of-type {
+        min-width: 120px;
+      }
+      border: 1px solid #ddd;
+      padding: 4px;
+    }
+  }
+`;
+
 const ItemPlaceholder = (
   <ItemContainer>
     <ItemImageContainer>
@@ -94,53 +120,275 @@ const ItemPlaceholder = (
   </ItemContainer>
 );
 
+const ExpandedItemDetailsPlaceholder = (
+  <table>
+    <tbody>
+      <tr>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+        <td>
+          <TextBlock color="#dfe6e9" rows={2} />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+        <td>
+          <TextBlock color="#dfe6e9" rows={6} />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+        <td>
+          <RectShape color="#dfe6e9" style={{ width: 400, height: 240 }} />
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <TextBlock color="#dfe6e9" rows={1} />
+        </td>
+        <td>
+          <TextBlock color="#dfe6e9" rows={2} />
+        </td>
+      </tr>
+    </tbody>
+  </table>
+);
+
 class Item extends Component {
   constructor(props) {
     super(props);
+    this.state = {
+      showDetails: false,
+      loadingDetails: false,
+      details: {},
+    };
+    this._getDetails = this._getDetails.bind(this);
   }
 
   componentWillUnmount() {
     console.debug('item unmounting');
   }
+
+  _getDetails() {
+    if (this.state.showDetails) {
+      return;
+    }
+    this.setState({ showDetails: true, loadingDetails: true });
+    try {
+      fetch(this.props.item.detailsUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Basic ' + btoa(`${this.props.clientToken}:`),
+        },
+      })
+        .then(res => {
+          if (res.status === 200) {
+            return res.json();
+          } else {
+            throw new Error('Error retrieving item details.');
+          }
+        })
+        .then(res => {
+          this.setState({ details: res.value, loadingDetails: false });
+        });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  makeTablesOutOfNestedObjects(obj) {
+    // returns <table>s
+    // base case 1: nothing
+    if (!obj) {
+      return 'None provided.';
+    }
+    // base case 2: if it's not an iterable, just return the json
+    if (!Array.isArray(obj) && typeof obj != 'object') {
+      console.log(obj);
+      return JSON.stringify(obj);
+    }
+    // base case 3: if it's an array of non-objects, just return it as a list string
+    if (Array.isArray(obj) && obj.every(o => typeof obj != 'object')) {
+      return obj.join('');
+    }
+
+    let rows = [];
+    Object.keys(obj).forEach(key => {
+      rows.push(
+        `<tr><td>${key}</td><td>${this.makeTablesOutOfNestedObjects(
+          obj[key]
+        )}</td></tr>`
+      );
+    });
+
+    return `<table><tbody>${rows.join('')}</tbody></table>`;
+  }
+
+  wrapArrayInTags(array, tag) {
+    if (!array) {
+      return 'None provided.';
+    }
+    // should return a string of jsx elements (to be dangerouslySetInnerHtml)
+    let startTag = `<${tag}>`;
+    let endTag = `</${tag}>`;
+    let elements = [];
+    array.forEach(item => {
+      elements.push(`${startTag}${item}${endTag}`);
+    });
+    return elements.join('');
+  }
+
+  generateExpandedDetails(details) {
+    let detailsHtml = [];
+
+    let primaryDetailsTable = [];
+    if (!details) {
+      return;
+    }
+    primaryDetailsTable.push(
+      <tr>
+        <td>Description</td>
+        <td>
+          <Truncate line={1}>
+            {details.product_description || 'None provided.'}
+          </Truncate>
+        </td>
+      </tr>
+    );
+    primaryDetailsTable.push(
+      <tr>
+        <td>Features</td>
+        <td>
+          <ul
+            dangerouslySetInnerHTML={{
+              __html: this.wrapArrayInTags(details.feature_bullets, 'li'),
+            }}
+          />
+        </td>
+      </tr>
+    );
+    primaryDetailsTable.push(
+      <tr>
+        <td>Details</td>
+        <td>
+          <ul
+            dangerouslySetInnerHTML={{
+              __html: this.wrapArrayInTags(details.product_details, 'li'),
+            }}
+          />
+        </td>
+      </tr>
+    );
+    primaryDetailsTable.push(
+      <tr>
+        <td>Rating</td>
+        <td>
+          {details.stars || 'Unknown'} out of {details.review_count || 0}{' '}
+          reviews
+        </td>
+      </tr>
+    );
+    primaryDetailsTable.push(
+      <tr>
+        <td>Package Dimensions</td>
+        <td>
+          <div
+            style={{ fontSize: '0.5em' }}
+            dangerouslySetInnerHTML={{
+              __html: this.makeTablesOutOfNestedObjects(
+                details.package_dimensions
+              ),
+            }}
+          />
+        </td>
+      </tr>
+    );
+    primaryDetailsTable.push(
+      <tr>
+        <td>Categories</td>
+        <td>{details.categories && details.categories.join(', ')}</td>
+      </tr>
+    );
+    detailsHtml.push(
+      <table>
+        <tbody>{primaryDetailsTable}</tbody>
+      </table>
+    );
+    detailsHtml.push(
+      <div style={{ marginTop: '16px' }}>
+        For the full blob returned by details,{' '}
+        <a href="https://docs.zincapi.com/#product-details" target="_blank">
+          see API docs.
+        </a>
+      </div>
+    );
+    return detailsHtml;
+  }
+
   render() {
     const item = this.props.item;
-    let dollars;
-    let cents;
+    let price;
     if (item.price == 0) {
-      dollars = 'Click for price';
+      price = '';
     } else {
-      dollars = item.price.toString().slice(0, -2) || '0';
-      cents = item.price.toString().slice(-2);
+      price = (
+        <Price hidden={this.state.hidePrice}>
+          <DollarSign>$</DollarSign>
+          <Dollars>{item.price.toString().slice(0, -2) || '0'}</Dollars>
+          <Cents>.{item.price.toString().slice(-2)}</Cents>
+        </Price>
+      );
     }
+
+    let expandedItemDetails;
+    if (this.state.showDetails) {
+      expandedItemDetails = (
+        <ExpandedItemDetails>
+          <ReactPlaceholder
+            ready={!this.state.loadingDetails}
+            customPlaceholder={ExpandedItemDetailsPlaceholder}
+            showLoadingAnimation={true}
+          >
+            {this.generateExpandedDetails(this.state.details)}
+          </ReactPlaceholder>
+        </ExpandedItemDetails>
+      );
+    }
+
     return (
       <ReactPlaceholder
         ready={this.props.ready}
         customPlaceholder={ItemPlaceholder}
         showLoadinganimation={true}
       >
-        <a
-          href={`https://www.amazon.com/-/dp/${item.product_id}`}
-          target="_blank"
-          style={{ textDecoration: 'none' }}
-        >
-          <ItemContainer>
-            <ItemImageContainer>
-              <ItemImage src={item.image} />
-            </ItemImageContainer>
-            <ItemDetails>
-              <ASIN>{item.product_id}</ASIN>
-              <Title>
-                <Truncate line={1}>{item.title}</Truncate>
-              </Title>
-              <Brand>by {item.brand}</Brand>
-              <Price>
-                <DollarSign>$</DollarSign>
-                <Dollars>{dollars}</Dollars>
-                <Cents>.{cents}</Cents>
-              </Price>
-            </ItemDetails>
-          </ItemContainer>
-        </a>
+        <ItemContainer onClick={this._getDetails}>
+          <ItemImageContainer>
+            <ItemImage src={item.image} />
+          </ItemImageContainer>
+          <ItemDetails>
+            <ASIN>{item.product_id}</ASIN>
+            <Title>
+              <Truncate line={1}>{item.title}</Truncate>
+            </Title>
+            <Brand>by {item.brand}</Brand>
+            {price}
+          </ItemDetails>
+          {expandedItemDetails}
+        </ItemContainer>
       </ReactPlaceholder>
     );
   }

@@ -104,12 +104,21 @@ class SearchPage extends Component {
       ready: [false], // indexed by page ready
       nextPageUrl: null, // url to receive lastPageReceived + 1, or undefined if no more pages
     };
-
+    this._processItems = this._processItems.bind(this);
     this._getNewResults = this._getNewResults.bind(this);
     this.clientTokenInput = React.createRef();
     this.searchQuery = React.createRef();
     this.handleSubmit = this.handleSubmit.bind(this);
     this._getNextResultPage = this._getNextResultPage.bind(this);
+  }
+
+  _processItems(items) {
+    items.forEach(item => {
+      item.detailsUrl = `https://api.zinc.io/v1/realtime/details/${
+        item.product_id
+      }?retailer=amazon`;
+    });
+    return items;
   }
 
   _getNewResults(token, searchQuery) {
@@ -148,7 +157,7 @@ class SearchPage extends Component {
         })
         .then(res => {
           let results = this.state.results;
-          results[0] = res.results;
+          results[0] = this._processItems(res.results);
           this.timeOne = performance.now();
           this.setState({
             results: results,
@@ -216,7 +225,7 @@ class SearchPage extends Component {
           }
         })
         .then(res => {
-          currentResults[nextPageIndex] = res.results;
+          currentResults[nextPageIndex] = this._processItems(res.results);
           currentReady[nextPageIndex] = true;
           const timeOne = performance.now();
           this.setState({
@@ -248,9 +257,12 @@ class SearchPage extends Component {
   }
 
   render() {
+    let clientToken =
+      this.clientTokenInput.current && this.clientTokenInput.current.value;
     let results = this.state.results;
     let resultsRendered = this.state.results.map((oneResultsPage, index) => (
       <ItemList
+        clientToken={clientToken}
         ready={this.state.ready[index]}
         items={results[index]}
         key={index}

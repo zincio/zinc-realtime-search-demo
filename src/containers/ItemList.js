@@ -9,8 +9,8 @@ const ItemsContainer = styled.div`
 
 /*
  * Each ItemList represents 10 items.
- * Until props.ready is true, it will display placeholders
- *
+ * Until props.ready is true, it will display placeholders.
+ * ItemLists should never
  */
 
 class ItemList extends Component {
@@ -37,6 +37,7 @@ class ItemList extends Component {
     } else {
       items = this.props.items.map(item => (
         <Item
+          clientToken={this.props.clientToken}
           ready={this.props.ready}
           item={new Proxy(item, itemDetailsHandler)}
           key={item.product_id}
