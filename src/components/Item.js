@@ -84,6 +84,25 @@ const Cents = styled.span`
   margin: 0 0 0 0.1em;
 `;
 
+const ImagesContainer = styled.div`
+  font-family: monospace;
+  a {
+    position: relative;
+    > img {
+      visibility: hidden;
+      max-width: 400px;
+      height: auto;
+      position: absolute;
+      top: 16px;
+      left: 0;
+      border: 4px solid black;
+    }
+    &:hover {
+      > img { visibility: visible; }
+    }
+  }
+`;
+
 const ExpandedItemDetails = styled.div`
   border-top: 1px solid #eee;
   padding: 16px;
@@ -94,6 +113,7 @@ const ExpandedItemDetails = styled.div`
     font-size: 0.8em;
     vertical-align: baseline;
     border-spacing: 0;
+    border-collapse: collapse;
     width: 100%;
     ul {
       margin: 0;
@@ -218,7 +238,6 @@ class Item extends Component {
     }
     // base case 2: if it's not an iterable, just return the json
     if (!Array.isArray(obj) && typeof obj != 'object') {
-      console.log(obj);
       return JSON.stringify(obj);
     }
     // base case 3: if it's an array of non-objects, just return it as a list string
@@ -259,6 +278,14 @@ class Item extends Component {
     if (!details) {
       return;
     }
+    let images = details.images && details.images.map((url, i) => <a>[ {i} ]<img src={url} /></a>);
+
+    primaryDetailsTable.push(
+      <tr>
+        <td>Images (hover)</td>
+        <td><ImagesContainer>{images}</ImagesContainer></td>
+      </tr>
+    )
     primaryDetailsTable.push(
       <tr>
         <td>Description</td>
